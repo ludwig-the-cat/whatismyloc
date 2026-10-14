@@ -3,9 +3,153 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>What is my location</title>
+    <title>What is my location?</title>
+    <style>
+        :root {
+            color-scheme: light dark;
+            --bg: #eef1f6;
+            --card: #ffffff;
+            --text: #1c1e21;
+            --muted: #6b7280;
+            --accent: #2563eb;
+            --error: #dc2626;
+            --border: #e5e7eb;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0f1115;
+                --card: #191c22;
+                --text: #f3f4f6;
+                --muted: #9ca3af;
+                --accent: #60a5fa;
+                --error: #f87171;
+                --border: #2a2e37;
+            }
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            background: var(--bg);
+            color: var(--text);
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        .card {
+            width: 100%;
+            max-width: 26rem;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 12px 32px rgba(15, 17, 21, 0.08);
+        }
+        h1 {
+            margin: 0 0 0.35rem;
+            font-size: 1.35rem;
+            text-align: center;
+        }
+        .subtitle {
+            margin: 0 0 1.5rem;
+            text-align: center;
+            color: var(--muted);
+            font-size: 0.85rem;
+        }
+        .subtitle a { color: var(--accent); }
+        dl { margin: 0; display: grid; gap: 0.75rem; }
+        .row {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 0.75rem 1rem;
+            background: var(--bg);
+            border-radius: 10px;
+        }
+        dt { color: var(--muted); font-size: 0.85rem; }
+        dd {
+            margin: 0;
+            font-weight: 600;
+            font-size: 1rem;
+            text-align: right;
+            overflow-wrap: anywhere;
+        }
+        .error { color: var(--error); font-weight: 500; }
+        .flag { font-size: 1.15em; }
+    </style>
 </head>
 <body>
-    <h1>Ah, here we go again.</h1>
+    <main class="card">
+        <h1>What is my location?</h1>
+        <p class="subtitle">Detected via <a href="https://ipwho.is/" target="_blank" rel="noopener">ipwho.is</a></p>
+        <dl>
+            <div class="row">
+                <dt>IP address</dt>
+                <dd id="ip">Loading&hellip;</dd>
+            </div>
+            <div class="row">
+                <dt>City</dt>
+                <dd id="city">Loading&hellip;</dd>
+            </div>
+            <div class="row">
+                <dt>Country</dt>
+                <dd id="country">Loading&hellip;</dd>
+            </div>
+        </dl>
+    </main>
+
+    <script>
+        const ipEl = document.getElementById('ip');
+        const cityEl = document.getElementById('city');
+        const countryEl = document.getElementById('country');
+
+        function flagFrom(code) {
+            if (!code) return '';
+            return code
+                .toUpperCase()
+                .replace(/[^A-Z]/g, '')
+                .replace(/./g, (c) => String.fromCodePoint(127397 + c.charCodeAt(0)));
+        }
+
+        function showError(message) {
+            ipEl.textContent = 'Unavailable';
+            cityEl.textContent = 'Unavailable';
+            countryEl.textContent = message || 'Could not determine your location';
+            countryEl.classList.add('error');
+        }
+
+        async function loadLocation() {
+            try {
+                const response = await fetch('https://ipwho.is/');
+                if (!response.ok) {
+                    throw new Error('Request failed (' + response.status + ')');
+                }
+                const data = await response.json();
+                if (!data.success) {
+                    throw new Error(data.message || 'Could not determine your location');
+                }
+
+                ipEl.textContent = data.ip || '\u2014';
+                cityEl.textContent = data.city || '\u2014';
+
+                const flag = flagFrom(data.country_code);
+                countryEl.textContent = '';
+                if (flag) {
+                    const span = document.createElement('span');
+                    span.className = 'flag';
+                    span.textContent = flag + ' ';
+                    countryEl.append(span);
+                }
+                countryEl.append(document.createTextNode(data.country || '\u2014'));
+            } catch (error) {
+                showError(error.message);
+            }
+        }
+
+        loadLocation();
+    </script>
 </body>
 </html>
